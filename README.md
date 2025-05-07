@@ -10,12 +10,12 @@ wantedlab project
 - docker
 - docker-compose
 
-# 실행 방법
+# Docker Command
 ```bash
 docker-compose up
 ```
 
-# 테스트코드 동작 방법
+# Test
 ```bash
 pip install -r requirements.txt
 pytest
