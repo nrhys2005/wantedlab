@@ -1,13 +1,14 @@
 import os
-from typing import Annotated
 
-from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy.orm import sessionmaker, declarative_base, mapped_column
+from sqlalchemy.orm import declarative_base
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-engine = create_async_engine("postgresql+asyncpg://user:password@localhost/dbname")
+if not DATABASE_URL:
+    DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+engine = create_async_engine(DATABASE_URL)
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,

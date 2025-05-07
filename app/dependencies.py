@@ -1,7 +1,7 @@
 from app.db import AsyncSessionLocal
 
 
-def get_async_db():
+async def get_async_db():
     async with AsyncSessionLocal() as session:
         async with session.begin():
             yield session

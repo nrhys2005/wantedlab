@@ -13,4 +13,4 @@ class Company(Base):
     company_name_ja: Mapped[str | None] = mapped_column(String)
     created_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    company_tags: Mapped[list["CompanyTag"]] = relationship(back_populates="company", cascade="all, delete-orphan")
+    company_tags: Mapped[list["CompanyTag"]] = relationship(back_populates="company", cascade="all, delete-orphan", lazy="selectin")

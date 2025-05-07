@@ -1,15 +1,17 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app import db
-from app.api.routes import companies, tags
+from app.api.routers import register_routers
 from app.db import Base
 
-app = FastAPI()
 
-
-@app.on_event("startup")
-def on_startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=db.engine)
+    yield
 
-app.include_router(companies.router, prefix="/companies", tags=["companies"])
-app.include_router(tags.router, prefix="/companies", tags=["tags"])
+app = FastAPI(lifespan=lifespan)
+register_routers(app)
+

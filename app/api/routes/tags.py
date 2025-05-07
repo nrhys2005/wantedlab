@@ -1,12 +1,11 @@
+from http import HTTPStatus
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schema.tag import TagCreate, TagResponse, TagUpdate
 from app.dependencies import get_async_db
-from app.models.company import Company
-from app.models.company_tag import CompanyTag
 from app.models.tag import Tag
 
 router = APIRouter()
@@ -24,7 +23,7 @@ async def create_tag(
             )
             if existing_tag.scalars().first():
                 raise HTTPException(
-                    status_code=400,
+                    status_code=HTTPStatus.BAD_REQUEST,
                     detail=f"Tag value '{tag_value}' already exists for {field}"
                 )
 
@@ -32,24 +31,6 @@ async def create_tag(
     db.add(db_tag)
     await db.flush()
     return db_tag
-
-@router.delete("/{company_id}/connect/{tag_id}", response_model=dict)
-async def disconnect_tag_from_company(
-    company_id: int,
-    tag_id: int,
-    db: AsyncSession = Depends(get_async_db)
-):
-    company_tag = await db.execute(
-        select(CompanyTag)
-        .where(CompanyTag.company_id == company_id)
-        .where(CompanyTag.tag_id == tag_id)
-    )
-    company_tag = company_tag.scalars().first()
-    if not company_tag:
-        raise HTTPException(status_code=404, detail="Tag connection not found")
-
-    await db.delete(company_tag)
-    return {"message": "Tag disconnected successfully"}
 
 @router.put("/{tag_id}", response_model=TagResponse)
 async def update_tag(
@@ -62,9 +43,18 @@ async def update_tag(
     if not tag:
         raise HTTPException(status_code=404, detail="Tag not found")
 
-    for field, value in tag_update.dict(exclude_unset=True).items():
+    for field, value in tag_update.dict().items():
+        if value and value != getattr(tag, field):
+            existing = await db.execute(
+                select(Tag).where(getattr(Tag, field) == value).where(Tag.id != tag_id)
+            )
+            if existing.scalars().first():
+                raise HTTPException(
+                    status_code=HTTPStatus.BAD_REQUEST,
+                    detail=f"Tag value '{value}' already exists for {field}"
+                )
         setattr(tag, field, value)
-
+    await db.commit()
     return tag
 
 @router.delete("/{tag_id}", response_model=dict)
@@ -75,7 +65,7 @@ async def delete_tag(
     tag = await db.execute(select(Tag).where(Tag.id == tag_id))
     tag = tag.scalars().first()
     if not tag:
-        raise HTTPException(status_code=404, detail="Tag not found")
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Tag not found")
 
     await db.delete(tag)
     return {"message": "Tag deleted successfully"}
